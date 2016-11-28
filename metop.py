@@ -32,46 +32,59 @@ class metopDownloader:
             os.makedirs(self.OUTPUT_DIR)
 
     def run(self,num):
+        """
+            Initial start of the script. Here we create the shapefile parameters and
+            fields into which we will store the values later.
 
+        """
 
         numSubtractionDays = datetime.timedelta(days=num)
         self.fromdate = (datetime.datetime.today() - numSubtractionDays).strftime('%Y/%m/%d')
         self.fromdate_output = (datetime.datetime.today() - numSubtractionDays).strftime('%Y-%m-%d')
 
-        self.outSHPfn = self.OUTPUT_DIR + '_metop.shp'
-        shpDriver = ogr.GetDriverByName("ESRI Shapefile")
-        if os.path.exists(self.outSHPfn):
-            shpDriver.DeleteDataSource(self.outSHPfn)
-        outDataSource = shpDriver.CreateDataSource(self.outSHPfn)
-        self.outLayer = outDataSource.CreateLayer(self.outSHPfn, geom_type=ogr.wkbPolygon)
+        if not os.path.exists(self.FTP_DIR + "METOP-O3/" + self.fromdate_output + ".png"):
+            self.outSHPfn = self.OUTPUT_DIR + '_metop.shp'
+            shpDriver = ogr.GetDriverByName("ESRI Shapefile")
+            if os.path.exists(self.outSHPfn):
+                shpDriver.DeleteDataSource(self.outSHPfn)
+            outDataSource = shpDriver.CreateDataSource(self.outSHPfn)
+            self.outLayer = outDataSource.CreateLayer(self.outSHPfn, geom_type=ogr.wkbPolygon)
 
-        o3Field = ogr.FieldDefn('o3', ogr.OFTReal)
-        o3Field.SetWidth(32)
-        self.outLayer.CreateField(o3Field)
-        no2Field = ogr.FieldDefn('no2', ogr.OFTReal)
-        no2Field.SetWidth(32)
-        self.outLayer.CreateField(no2Field)
-        so2Field = ogr.FieldDefn('so2', ogr.OFTReal)
-        so2Field.SetWidth(32)
-        self.outLayer.CreateField(so2Field)
-        hchoField = ogr.FieldDefn('hcho', ogr.OFTReal)
-        hchoField.SetWidth(32)
-        self.outLayer.CreateField(hchoField)
-        no2tropo = ogr.FieldDefn('no2tropo', ogr.OFTReal)
-        no2tropo.SetWidth(32)
-        self.outLayer.CreateField(no2tropo)
+            o3Field = ogr.FieldDefn('o3', ogr.OFTReal)
+            o3Field.SetWidth(32)
+            self.outLayer.CreateField(o3Field)
+            no2Field = ogr.FieldDefn('no2', ogr.OFTReal)
+            no2Field.SetWidth(32)
+            self.outLayer.CreateField(no2Field)
+            so2Field = ogr.FieldDefn('so2', ogr.OFTReal)
+            so2Field.SetWidth(32)
+            self.outLayer.CreateField(so2Field)
+            hchoField = ogr.FieldDefn('hcho', ogr.OFTReal)
+            hchoField.SetWidth(32)
+            self.outLayer.CreateField(hchoField)
+            no2tropo = ogr.FieldDefn('no2tropo', ogr.OFTReal)
+            no2tropo.SetWidth(32)
+            self.outLayer.CreateField(no2tropo)
 
-        featureDefn = self.outLayer.GetLayerDefn()
-        self.outFeature = ogr.Feature(featureDefn)
+            featureDefn = self.outLayer.GetLayerDefn()
+            self.outFeature = ogr.Feature(featureDefn)
 
-        directory = ["gome2b", "gome2a"]
-        for dir in directory:
-            metopDownloader.downloadData(self,dir)
+            directory = ["gome2b", "gome2a"]
+            for dir in directory:
+                metopDownloader.downloadData(self,dir)
 
-        outDataSource.Destroy()
+            outDataSource.Destroy()
+            self.createoutput()
+        else:
+            print self.FTP_DIR + "METOP-O3/" + self.fromdate_output + ".png already exists."
 
 
     def downloadData(self, dir):
+        """
+            The download part of the program. Here we retrieve the data from the FTP site
+            and start processing it.
+
+        """
         ftp = FTP('atmos.caf.dlr.de')
         ftp.login("{{USERNAME}}", "{{PASSWORD}}")
         ftp.cwd(dir + '/offline/' + self.fromdate + '/')
@@ -83,9 +96,8 @@ class metopDownloader:
             words = list.split(None, 8)
             filename = words[-1].lstrip()
             if "GOME_O3-NO2-NO2Tropo-BrO-SO2-H2O-HCHO_L2_" in filename:
-                print self.OUTPUT_DIR + "/" + filename
                 if not os.path.exists(self.OUTPUT_DIR + filename):
-                    print 'Downloading file ' + filename
+                    print 'Downloading and processing: ' + filename
                     file = open(self.OUTPUT_DIR + filename, 'wb')
                     ftp.retrbinary('RETR %s' % filename, file.write)
                     file.close()
@@ -93,10 +105,6 @@ class metopDownloader:
                 #i.e. f = h5py.File("GOME_O3-NO2-NO2Tropo-BrO-SO2-H2O-HCHO_L2_20161120000813_051_METOPB_21656_DLR_04.HDF5", "r")
                 f = h5py.File(self.OUTPUT_DIR + filename, "r")
 
-                # print f.keys()
-                detailedResults = f['DETAILED_RESULTS']
-                # print detailedResults.keys()
-                # print f['TOTAL_COLUMNS'].keys()
                 totalO3columns = f['TOTAL_COLUMNS']['O3']
                 totalNO2columns = f['TOTAL_COLUMNS']['NO2']
                 totalSO2columns = f['TOTAL_COLUMNS']['SO2']
@@ -107,10 +115,9 @@ class metopDownloader:
                 geolocation = f['GEOLOCATION']
                 geolocationLatCount = np.array(geolocation['LatitudeA'])
                 indexInScan = geolocation['IndexInScan']
-                orbitalMode = geolocation['OrbitalMode']
                 bar = Bar('Processing', max=len(geolocationLatCount))
                 for count in geolocationLatCount:
-                    if indexInScan[counter] != 3: #and orbitalMode != 1:
+                    if indexInScan[counter] != 3:
                         ring = ogr.Geometry(ogr.wkbLinearRing)
                         ring.AddPoint(float(geolocation['LongitudeA'][counter]), float(geolocation['LatitudeA'][counter]))
                         ring.AddPoint(float(geolocation['LongitudeB'][counter]), float(geolocation['LatitudeB'][counter]))
@@ -129,17 +136,21 @@ class metopDownloader:
                         area = geom.GetArea()
                         bar.next()
 
-                        # outLayer.CreateFeature(outFeature)
                         if area < 10:
-                            # print area
+                            # To remove artefacts of data that cross the date time line, we limit the area.
                             self.outLayer.CreateFeature(self.outFeature)
-                            if counter > 10:
-                                break
+                            # Useful testing breakpoint.
+                            # if counter > 10:
+                            #     break
 
                     counter = counter + 1
                 bar.finish()
 
     def createoutput(self):
+        """
+            For each product that we require, iterate through the shapefile and rasterize according to that field.
+            Then, translate into PNG and crop.
+        """
         products = ["o3", "no2", "so2", "hcho", "no2tropo"]
 
         for product in products:
@@ -147,7 +158,8 @@ class metopDownloader:
                 os.makedirs(self.FTP_DIR + "METOP-" + product.upper() + "/")
 
             gdalrasterizecommand = "gdal_rasterize -a " + product + " -ts 8192 4096 " + self.outSHPfn + " " + self.OUTPUT_DIR + product + ".tif"
-            print gdalrasterizecommand
+            if self.debug:
+                print gdalrasterizecommand
             subprocess.call(gdalrasterizecommand, shell=True)
             outputFileName = self.FTP_DIR + "METOP-" + product.upper() + "/" + self.fromdate_output + ".png"
 
@@ -155,7 +167,8 @@ class metopDownloader:
                              self.OUTPUT_DIR + product + ".tif " + \
                              self.COLOUR_FOLDER + "METOP-" + product.upper() + ".txt  " + \
                              outputFileName
-            print gdaldemcommand
+            if self.debug:
+                print gdaldemcommand
             subprocess.call(gdaldemcommand, shell=True)
             subprocess.call("convert " + outputFileName + " -gravity Center -crop 8150x4096+0+0 +repage " + outputFileName, shell=True)
             subprocess.call("rm " + outputFileName + ".*", shell=True)
@@ -163,7 +176,7 @@ class metopDownloader:
 
     def cleanup(self):
         if not self.debug:
-            subprocess.call("rm " + self.OUTPUT_DIR + "*.*", shell=True)
+            subprocess.call("rm " + self.OUTPUT_DIR + "*", shell=True)
 
 
 def main():
@@ -171,12 +184,12 @@ def main():
     """ Main loop to begin the processing.
 
     """
-    BACKFILL_DAYS = 4
+    BACKFILL_DAYS = 6
     downloader = metopDownloader()
     downloader.cleanup()
     for num in range(3, BACKFILL_DAYS):
         downloader.run(num)
-        downloader.createoutput()
+
     downloader.cleanup()
 
 
