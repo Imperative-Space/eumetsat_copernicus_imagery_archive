@@ -1,0 +1,33 @@
+[ {
+  "process": false,
+  "historical": true,
+  "useMotu": true,
+  "username": "treinicke1",
+  "password": "Infoterra1",
+  "m": "http://myocean.met.no/miscas/cgi-bin/fiMisSubsetter",
+  "s": "http://purl.org/myocean/ontology/service/database#SEAICE_ARC_SEAICE_L3_REP_OBSERVATIONS_011_010-TDS",
+  "dataset": "CERSAT-GLO-SEAICE_30DAYS_DRIFT_ASCAT_SSMI_MERGED_RAN-OBS_FULL_TIME_SERIE",
+  "variable": "northward_sea_ice_velocity",
+  "variableName": "northward_sea_ice_velocity",
+  "dateformat": "%Y-%m-01",
+  "startDate": "2012-04-01",
+  "endDate": "2007-02-01",
+  "daysAgo": 0
+},
+
+  {
+    "process": false,
+    "type": "useMotu",
+    "username": "treinicke1",
+    "password": "Infoterra1",
+    "m": "http://cmems.isac.cnr.it/mis-gateway-servlet/Motu",
+    "s": "WIND_GLO_WIND_L4_NRT_OBSERVATIONS_012_004-TDS",
+    "dataset": "CERSAT-GLO-BLENDED_WIND_L4-V3-OBS_FULL_TIME_SERIE",
+    "variable": "wind_speed",
+    "dateformat": "%Y-%m-%d 12:00",
+    "daysAgo": 4,
+    "ts" : "8196 0"
+  },
+
+
+]
