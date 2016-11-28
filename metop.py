@@ -133,8 +133,9 @@ class metopDownloader:
                         if area < 10:
                             # print area
                             self.outLayer.CreateFeature(self.outFeature)
-                            if counter > 10:
-                                break
+                            # Test break below.
+                            #if counter > 10:
+                            #    break
 
                     counter = counter + 1
                 bar.finish()
