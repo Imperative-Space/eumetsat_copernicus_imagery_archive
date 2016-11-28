@@ -139,6 +139,7 @@ class metopDownloader:
                         if area < 10:
                             # To remove artefacts of data that cross the date time line, we limit the area.
                             self.outLayer.CreateFeature(self.outFeature)
+
                             # Useful testing breakpoint.
                             # if counter > 10:
                             #     break
